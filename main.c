@@ -15,6 +15,13 @@ void flushInput()
         /* ignore */;
 }
 
+// Converts string to lowercase
+void toLowerStr(char *str)
+{
+    for (size_t i = 0; i < strlen(str); i++)
+        str[i] = (char)tolower(str[i]);
+}
+
 // Accepts line from input stream
 void inputLine(char *str)
 {
@@ -137,25 +144,353 @@ void printStudentTableFooterWithHash()
     printf("-----------------------------------------------------------------------\n\n");
 }
 
+// #################### Linked List ####################
+
+// Represents linked list node
+typedef struct StudentListNode StudentListNode;
+struct StudentListNode
+{
+    StudentInfo student;   // Node data (student info)
+    StudentListNode *next; // Points to next node or end (null ptr)
+};
+
+// Contains linked list info
+typedef struct StudentList
+{
+    StudentListNode *head; // Points to first node or end (null ptr)
+} StudentList;
+
+// Initializes list
+void initList(StudentList *students)
+{
+    // Empty list
+    students->head = NULL;
+}
+
+// Checks if list is empty
+int isListEmpty(StudentList *students)
+{
+    // Check if list is empty
+    return students->head == NULL;
+}
+
+// Adds student info to list (from head)
+void insertList(StudentList *students, const StudentInfo *student)
+{
+    // Create new head which points to old head [which can be end (null ptr)]
+    StudentListNode *newHead = (StudentListNode *)malloc(sizeof(StudentListNode));
+    newHead->student = *student;
+    newHead->next = students->head;
+
+    // Point list head to newly created head
+    students->head = newHead;
+}
+
+// Searches by name (lowercase) for student info in list
+const StudentListNode *findList(StudentList *students, const char *studentName)
+{
+    char name[STR_SIZ];
+
+    // Get first node
+    StudentListNode *current = students->head;
+
+    // Iterate over list until end (null ptr)
+    while (current != NULL)
+    {
+        // Convert student name to lowercase
+        strcpy(name, current->student.name);
+        toLowerStr(name);
+
+        // Check student name
+        if (strcmp(name, studentName) == 0)
+            return current;
+
+        // Get next node
+        current = current->next;
+    }
+
+    // Couldn't find student info with that name
+    return NULL;
+}
+
+// Removes student info with name (lowercase) from list
+int removeList(StudentList *students, const char *studentName)
+{
+    char name[STR_SIZ];
+
+    // Check if list is empty
+    if (students->head == NULL)
+        return 0;
+
+    // Convert head student name to lowercase
+    strcpy(name, students->head->student.name);
+    toLowerStr(name);
+    
+    // Check head
+    if (strcmp(name, studentName) == 0)
+    {
+        StudentListNode *temp = students->head;
+        students->head = students->head->next;
+        free(temp);
+        return 1;
+    }
+
+    // Get second node
+    StudentListNode *prev = students->head;
+    StudentListNode *current = students->head->next;
+
+    // Iterate over list until end (null ptr)
+    while (current != NULL)
+    {
+        // Convert student name to lowercase
+        strcpy(name, current->student.name);
+        toLowerStr(name);
+
+        // Check student name
+        if (strcmp(name, studentName) == 0)
+        {
+            prev->next = current->next;
+            free(current);
+            return 1;
+        }
+
+        // Get next node
+        prev = current;
+        current = current->next;
+    }
+
+    // Couldn't find student info with that name
+    return 0;
+}
+
+void printListWithHash(StudentList *students, size_t hash)
+{
+    // Get first node
+    size_t i = 0;
+    StudentListNode *current = students->head;
+
+    // Iterate over list until end (null ptr)
+    while (current != NULL)
+    {
+        // Print student
+        if (i == 0)
+            printStudentTableWithHash(&current->student, hash);
+        else
+            printStudentTable(&current->student);
+
+        // Get next node
+        i++;
+        current = current->next;
+    }
+}
+
+// Destroys list
+void destroyList(StudentList *students)
+{
+    // Get first node
+    StudentListNode *temp = NULL;
+    StudentListNode *current = students->head;
+
+    // Reset list
+    students->head = NULL;
+
+    // Iterate over list until end (null ptr)
+    while (current != NULL)
+    {
+        // Get next node
+        temp = current;
+        current = current->next;
+
+        // Delete node
+        free(temp);
+    }
+}
+
+// ####################### Hashing #####################
+
+// Computes hash of student name
+size_t hashStudentName(const char *studentName)
+{
+    size_t hash = 0;
+    for (size_t i = 0; i < strlen(studentName); i++)
+        hash += (size_t)tolower(studentName[i]);
+    return hash;
+}
+
+// #################### Open Hashing ###################
+
+// Contains open hash table info
+typedef struct OpenHash
+{
+    size_t size;        // Hash table size
+    StudentList *table; // Points to first list of elements (contiguous)
+} OpenHash;
+
+// Initializes open hash
+void initOpenHash(OpenHash *openTable, unsigned int tableSize)
+{
+    // Initialize table
+    openTable->size = tableSize;
+    openTable->table = (StudentList *)malloc(openTable->size * sizeof(StudentList));
+
+    // Initialize lists
+    for (size_t i = 0; i < openTable->size; i++)
+        initList(&openTable->table[i]);
+}
+
+// Adds student info to open hash
+void insertOpenHash(OpenHash *openTables, const StudentInfo *student)
+{
+    // Get index using student name
+    size_t index = hashStudentName(student->name) % openTables->size;
+
+    // Get students list
+    StudentList *students = &openTables->table[index];
+
+    // Add student to students list
+    insertList(students, student);
+}
+
+// Searches by name for student info in open hash
+const StudentInfo *findOpenHash(OpenHash *openTables, const char *studentName)
+{
+    // Get index using student name
+    size_t index = hashStudentName(studentName) % openTables->size;
+
+    // Get students list
+    StudentList *students = &openTables->table[index];
+
+    // Search student in students list
+    const StudentListNode *listNode = findList(students, studentName);
+    if (listNode != NULL)
+        return &listNode->student;
+
+    // Couldn't find student info with that name
+    return NULL;
+}
+
+// Removes student info with name from open hash
+int removeOpenHash(OpenHash *openTables, const char *studentName)
+{
+    // Get index using student name
+    size_t index = hashStudentName(studentName) % openTables->size;
+
+    // Get students list
+    StudentList *students = &openTables->table[index];
+
+    // Remove student from students list
+    return removeList(students, studentName);
+}
+
+// Prints all students in open hash
+void printOpenHash(OpenHash *openTable)
+{
+    // Print table header
+    printStudentTableHeaderWithHash();
+
+    // Print lists
+    for (size_t i = 0; i < openTable->size; i++)
+    {
+        // Get students list
+        StudentList *students = &openTable->table[i];
+
+        // Print list
+        if (!isListEmpty(students))
+            printListWithHash(students, i);
+        else
+            printf("| %6lu |        |                          |              |         |\n", i);
+    }
+
+    // Print table footer
+    printStudentTableFooterWithHash();
+}
+
+// Destroys open hash
+void destroyOpenHash(OpenHash *openTable)
+{
+    // Destroy lists
+    for (size_t i = 0; i < openTable->size; i++)
+        destroyList(&openTable->table[i]);
+
+    // Save table
+    StudentList *temp = openTable->table;
+
+    // Reset open hash
+    openTable->table = NULL;
+    openTable->size = 0;
+
+    // Remove table
+    free(temp);
+}
+
 int main()
 {
     // ############ Welcome Text ############
     printf("############### Welcome ###############\n\n");
 
-    // Create student 1
-    StudentInfo student1;
-    fillStudent(&student1);
-    printStudent(&student1);
+    // ########### Open Hash Demo ###########
+    printf("########### Open Hash Demo ############\n\n");
 
-    // Create student 2
-    StudentInfo student2;
-    fillStudent(&student2);
-    printStudent(&student2);
+    // Get open hash size
+    int openHashSize;
+    printf("Enter N (open hash size): ");
+    scanf("%d", &openHashSize);
+    flushInput();
+    printf("\n");
 
-    // Print student table
-    printStudentTableHeaderWithHash();
-    printStudentTableWithHash(&student1, 1);
-    printStudentTableWithHash(&student2, 2);
-    printStudentTableFooterWithHash();
+    // Create open hash
+    OpenHash openHash;
+    initOpenHash(&openHash, openHashSize);
+
+    // Add random students to open hash
+    for (size_t i = 0; i < openHashSize; i++)
+    {
+        StudentInfo openHashStudent;
+        fillRandomStudent(&openHashStudent);
+        insertOpenHash(&openHash, &openHashStudent);
+    }
+
+    // Print open hash
+    printOpenHash(&openHash);
+
+    // Insert student demo
+    printf("[Insert Demo]\n");
+    StudentInfo openHashStudentInsert;
+    fillStudent(&openHashStudentInsert);
+    insertOpenHash(&openHash, &openHashStudentInsert);
+
+    // Print open hash
+    printOpenHash(&openHash);
+
+    // Find student demo
+    printf("[Find Demo]\n");
+    printf("Enter student name to find: ");
+    char openHashFindName[STR_SIZ];
+    inputLine(openHashFindName);
+    toLowerStr(openHashFindName);
+    const StudentInfo *openHashStudentFind = findOpenHash(&openHash, openHashFindName);
+    if (openHashStudentFind != NULL)
+        printStudent(openHashStudentFind);
+    else
+        printf("Couldn't find student with that name.\n\n");
+
+    // Print open hash
+    printOpenHash(&openHash);
+
+    // Remove student demo
+    printf("[Remove Demo]\n");
+    printf("Enter student name to remove: ");
+    char openHashRemoveName[STR_SIZ];
+    inputLine(openHashRemoveName);
+    toLowerStr(openHashRemoveName);
+    if (!removeOpenHash(&openHash, openHashRemoveName))
+        printf("Couldn't find student with that name.\n\n");
+
+    // Print open hash
+    printOpenHash(&openHash);
+
+    // Destroy open hash
+    destroyOpenHash(&openHash);
+
     return 0;
 }
