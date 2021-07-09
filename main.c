@@ -189,7 +189,12 @@ void insertList(StudentList *students, const StudentInfo *student)
 // Searches by name (lowercase) for student info in list
 const StudentListNode *findList(StudentList *students, const char *studentName)
 {
-    char name[STR_SIZ];
+    char nameLower[STR_SIZ];
+    char studentNameLower[STR_SIZ];
+
+    // Convert student name to lowercase
+    strcpy(studentNameLower, studentName);
+    toLowerStr(studentNameLower);
 
     // Get first node
     StudentListNode *current = students->head;
@@ -197,12 +202,12 @@ const StudentListNode *findList(StudentList *students, const char *studentName)
     // Iterate over list until end (null ptr)
     while (current != NULL)
     {
-        // Convert student name to lowercase
-        strcpy(name, current->student.name);
-        toLowerStr(name);
+        // Convert current student name to lowercase
+        strcpy(nameLower, current->student.name);
+        toLowerStr(nameLower);
 
         // Check student name
-        if (strcmp(name, studentName) == 0)
+        if (strcmp(nameLower, studentNameLower) == 0)
             return current;
 
         // Get next node
@@ -216,18 +221,24 @@ const StudentListNode *findList(StudentList *students, const char *studentName)
 // Removes student info with name (lowercase) from list
 int removeList(StudentList *students, const char *studentName)
 {
-    char name[STR_SIZ];
 
     // Check if list is empty
     if (students->head == NULL)
         return 0;
 
+    char nameLower[STR_SIZ];
+    char studentNameLower[STR_SIZ];
+
+    // Convert student name to lowercase
+    strcpy(studentNameLower, studentName);
+    toLowerStr(studentNameLower);
+
     // Convert head student name to lowercase
-    strcpy(name, students->head->student.name);
-    toLowerStr(name);
-    
+    strcpy(nameLower, students->head->student.name);
+    toLowerStr(nameLower);
+
     // Check head
-    if (strcmp(name, studentName) == 0)
+    if (strcmp(nameLower, studentNameLower) == 0)
     {
         StudentListNode *temp = students->head;
         students->head = students->head->next;
@@ -243,11 +254,11 @@ int removeList(StudentList *students, const char *studentName)
     while (current != NULL)
     {
         // Convert student name to lowercase
-        strcpy(name, current->student.name);
-        toLowerStr(name);
+        strcpy(nameLower, current->student.name);
+        toLowerStr(nameLower);
 
         // Check student name
-        if (strcmp(name, studentName) == 0)
+        if (strcmp(nameLower, studentNameLower) == 0)
         {
             prev->next = current->next;
             free(current);
@@ -467,7 +478,6 @@ int main()
     printf("Enter student name to find: ");
     char openHashFindName[STR_SIZ];
     inputLine(openHashFindName);
-    toLowerStr(openHashFindName);
     const StudentInfo *openHashStudentFind = findOpenHash(&openHash, openHashFindName);
     if (openHashStudentFind != NULL)
         printStudent(openHashStudentFind);
@@ -482,8 +492,9 @@ int main()
     printf("Enter student name to remove: ");
     char openHashRemoveName[STR_SIZ];
     inputLine(openHashRemoveName);
-    toLowerStr(openHashRemoveName);
-    if (!removeOpenHash(&openHash, openHashRemoveName))
+    if (removeOpenHash(&openHash, openHashRemoveName))
+        printf("Removed student.\n\n");
+    else
         printf("Couldn't find student with that name.\n\n");
 
     // Print open hash
