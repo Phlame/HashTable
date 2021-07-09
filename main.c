@@ -1,6 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
+// ###################### Utility ######################
+
+#define STR_SIZ 25
+
+// Flushes input stream (used after scanf and before getchar, gets)
+void flushInput()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        /* ignore */;
+}
+
+// Accepts line from input stream
+void inputLine(char *str)
+{
+    fgets(str, STR_SIZ, stdin);
+    str[strcspn(str, "\n")] = '\0';
+}
 
 // ###################### Student ######################
 
@@ -16,7 +36,7 @@ typedef struct Date
 typedef struct StudentInfo
 {
     int id;
-    char name[25];
+    char name[STR_SIZ];
     Date birthDate;
     int score;
 } StudentInfo;
@@ -26,15 +46,10 @@ void fillStudent(StudentInfo *student)
 {
     printf("Enter ID: ");
     scanf("%d", &student->id);
-
-    // Flush input
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-        /* ignore */;
+    flushInput();
 
     printf("Enter Name: ");
-    fgets(student->name, sizeof(student->name), stdin);
-    student->name[strcspn(student->name, "\n")] = '\0';
+    inputLine(student->name);
 
     printf("Enter Birth Date (Day Month Year): ");
     scanf("%d", &student->birthDate.day);
@@ -43,6 +58,7 @@ void fillStudent(StudentInfo *student)
 
     printf("Enter Score: ");
     scanf("%d", &student->score);
+    flushInput();
     printf("\n");
 }
 
@@ -50,12 +66,14 @@ void fillStudent(StudentInfo *student)
 void fillRandomStudent(StudentInfo *student)
 {
     typedef const char *str;
-    static const str firstNames[] = {"Adham", "Ali", "Ibrahim"};
-    static const str lastNames[] = {"Mohamed", "Medhat", "Nader"};
+    static const str FIRST_NAMES[] = {"Adham", "Ali", "Ibrahim", "Fadi", "Nour",
+                                      "Mahmoud", "Thabet", "Salah", "Ziad", "Sayed"};
+    static const str LAST_NAMES[] = {"Mohamed", "Medhat", "Nader", "Omar", "Maged",
+                                     "Ahmed", "Naser", "Ehab", "Sherif", "Samy"};
 
-    str firstName = firstNames[rand() % 3];
+    str firstName = FIRST_NAMES[rand() % 3];
     size_t firstNameLength = strlen(firstName);
-    str lastName = lastNames[rand() % 3];
+    str lastName = LAST_NAMES[rand() % 3];
     size_t lastNameLength = strlen(lastName);
 
     memcpy(student->name, firstName, firstNameLength * sizeof(char));
@@ -78,11 +96,11 @@ void printStudent(const StudentInfo *student)
 }
 
 // Prints students table header
-void printStudentTableHeader()
+void printStudentTableHeaderWithHash()
 {
-    printf("--------------------------------------------------------------\n");
-    printf("|     ID |           Name           |  Birth Date  |   Score |\n");
-    printf("--------------------------------------------------------------\n");
+    printf("-----------------------------------------------------------------------\n");
+    printf("|   Hash |     ID |           Name           |  Birth Date  |   Score |\n");
+    printf("-----------------------------------------------------------------------\n");
 }
 
 // Prints student in tabular form
@@ -94,15 +112,29 @@ void printStudentTable(const StudentInfo *student)
             student->birthDate.month, student->birthDate.year);
 
     // Print student in tabular form
-    printf("| %6d | %-24s | %-12s | %6d%% |\n",
+    printf("|        | %6d | %-24s | %-12s | %6d%% |\n",
+           student->id, student->name,
+           birthDate, student->score);
+}
+
+// Prints student in tabular form with hash
+void printStudentTableWithHash(const StudentInfo *student, size_t hash)
+{
+    // Format birth date
+    char birthDate[13];
+    sprintf(birthDate, "%d/%d/%d", student->birthDate.day,
+            student->birthDate.month, student->birthDate.year);
+
+    // Print student in tabular form
+    printf("| %6lu | %6d | %-24s | %-12s | %6d%% |\n", hash,
            student->id, student->name,
            birthDate, student->score);
 }
 
 // Prints student in tabular form
-void printStudentTableFooter()
+void printStudentTableFooterWithHash()
 {
-    printf("--------------------------------------------------------------\n\n");
+    printf("-----------------------------------------------------------------------\n\n");
 }
 
 int main()
@@ -121,9 +153,9 @@ int main()
     printStudent(&student2);
 
     // Print student table
-    printStudentTableHeader();
-    printStudentTable(&student1);
-    printStudentTable(&student2);
-    printStudentTableFooter();
+    printStudentTableHeaderWithHash();
+    printStudentTableWithHash(&student1, 1);
+    printStudentTableWithHash(&student2, 2);
+    printStudentTableFooterWithHash();
     return 0;
 }
