@@ -144,6 +144,35 @@ void printStudentTableFooterWithHash()
     printf("-----------------------------------------------------------------------\n\n");
 }
 
+// ####################### Hashing #####################
+
+// Computes hash of student name
+size_t hashStudentName(const char *studentName)
+{
+    size_t hash = 0;
+    for (size_t i = 0; i < strlen(studentName); i++)
+        hash += (size_t)tolower(studentName[i]);
+    return hash;
+}
+
+// Compares a student by name
+int compareStudentName(const StudentInfo *student, const char *studentName)
+{
+    char nameLower[STR_SIZ];
+    char studentNameLower[STR_SIZ];
+
+    // Convert studentName to lowercase
+    strcpy(studentNameLower, studentName);
+    toLowerStr(studentNameLower);
+
+    // Convert student name to lowercase
+    strcpy(nameLower, student->name);
+    toLowerStr(nameLower);
+
+    // Check student name
+    return strcmp(nameLower, studentNameLower) == 0;
+}
+
 // #################### Linked List ####################
 
 // Represents linked list node
@@ -189,25 +218,14 @@ void insertList(StudentList *students, const StudentInfo *student)
 // Searches by name (lowercase) for student info in list
 const StudentListNode *findList(StudentList *students, const char *studentName)
 {
-    char nameLower[STR_SIZ];
-    char studentNameLower[STR_SIZ];
-
-    // Convert student name to lowercase
-    strcpy(studentNameLower, studentName);
-    toLowerStr(studentNameLower);
-
     // Get first node
     StudentListNode *current = students->head;
 
     // Iterate over list until end (null ptr)
     while (current != NULL)
     {
-        // Convert current student name to lowercase
-        strcpy(nameLower, current->student.name);
-        toLowerStr(nameLower);
-
         // Check student name
-        if (strcmp(nameLower, studentNameLower) == 0)
+        if (compareStudentName(&current->student, studentName))
             return current;
 
         // Get next node
@@ -221,24 +239,12 @@ const StudentListNode *findList(StudentList *students, const char *studentName)
 // Removes student info with name (lowercase) from list
 int removeList(StudentList *students, const char *studentName)
 {
-
     // Check if list is empty
     if (students->head == NULL)
         return 0;
 
-    char nameLower[STR_SIZ];
-    char studentNameLower[STR_SIZ];
-
-    // Convert student name to lowercase
-    strcpy(studentNameLower, studentName);
-    toLowerStr(studentNameLower);
-
-    // Convert head student name to lowercase
-    strcpy(nameLower, students->head->student.name);
-    toLowerStr(nameLower);
-
     // Check head
-    if (strcmp(nameLower, studentNameLower) == 0)
+    if (compareStudentName(&students->head->student, studentName))
     {
         StudentListNode *temp = students->head;
         students->head = students->head->next;
@@ -253,12 +259,8 @@ int removeList(StudentList *students, const char *studentName)
     // Iterate over list until end (null ptr)
     while (current != NULL)
     {
-        // Convert student name to lowercase
-        strcpy(nameLower, current->student.name);
-        toLowerStr(nameLower);
-
         // Check student name
-        if (strcmp(nameLower, studentNameLower) == 0)
+        if (compareStudentName(&current->student, studentName))
         {
             prev->next = current->next;
             free(current);
@@ -317,17 +319,6 @@ void destroyList(StudentList *students)
     }
 }
 
-// ####################### Hashing #####################
-
-// Computes hash of student name
-size_t hashStudentName(const char *studentName)
-{
-    size_t hash = 0;
-    for (size_t i = 0; i < strlen(studentName); i++)
-        hash += (size_t)tolower(studentName[i]);
-    return hash;
-}
-
 // #################### Open Hashing ###################
 
 // Contains open hash table info
@@ -341,7 +332,7 @@ typedef struct OpenHash
 void initOpenHash(OpenHash *openTable, unsigned int tableSize)
 {
     // Initialize table
-    openTable->size = tableSize;
+    openTable->size = tableSize == 0 ? 1 : tableSize;
     openTable->table = (StudentList *)malloc(openTable->size * sizeof(StudentList));
 
     // Initialize lists
@@ -443,18 +434,25 @@ int main()
     printf("########### Open Hash Demo ############\n\n");
 
     // Get open hash size
-    int openHashSize;
+    unsigned int N;
     printf("Enter N (open hash size): ");
-    scanf("%d", &openHashSize);
+    scanf("%u", &N);
     flushInput();
     printf("\n");
 
     // Create open hash
     OpenHash openHash;
-    initOpenHash(&openHash, openHashSize);
+    initOpenHash(&openHash, N);
+
+    // Get open hash random students
+    unsigned int M;
+    printf("Enter M (random students count): ");
+    scanf("%u", &M);
+    flushInput();
+    printf("\n");
 
     // Add random students to open hash
-    for (size_t i = 0; i < openHashSize; i++)
+    for (size_t i = 0; i < M; i++)
     {
         StudentInfo openHashStudent;
         fillRandomStudent(&openHashStudent);
