@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
+
+#define BENCHMARK
 
 // ###################### Utility ######################
 
@@ -27,6 +30,31 @@ void inputLine(char *str)
 {
     fgets(str, STR_SIZ, stdin);
     str[strcspn(str, "\n")] = '\0';
+}
+
+// Waits for enter to continue
+void waitForEnter()
+{
+    getchar();
+}
+
+float startTime; // Start time of timer
+// Starts timer
+void startTimer()
+{
+    // Record start time
+    startTime = (float)clock() / CLOCKS_PER_SEC;
+}
+
+// Ends timer and returns elapsed time in ms
+float endTimer()
+{
+    // Record end time and calculate delta time
+    float endTime = (float)clock() / CLOCKS_PER_SEC;
+    float deltaTime = endTime - startTime;
+
+    // Return delta time
+    return deltaTime * 1e3;
 }
 
 // ###################### Student ######################
@@ -76,11 +104,11 @@ void fillRandomStudent(StudentInfo *student)
     static const str FIRST_NAMES[] = {"Adham", "Ali", "Ibrahim", "Fadi", "Nour",
                                       "Mahmoud", "Thabet", "Salah", "Ziad", "Sayed"};
     static const str LAST_NAMES[] = {"Mohamed", "Medhat", "Nader", "Omar", "Maged",
-                                     "Ahmed", "Naser", "Ehab", "Sherif", "Samy"};
+                                     "Ahmed", "Nasser", "Ehab", "Sherif", "Samy"};
 
-    str firstName = FIRST_NAMES[rand() % 3];
+    str firstName = FIRST_NAMES[rand() % (sizeof(FIRST_NAMES) / sizeof(str))];
     size_t firstNameLength = strlen(firstName);
-    str lastName = LAST_NAMES[rand() % 3];
+    str lastName = LAST_NAMES[rand() % (sizeof(LAST_NAMES) / sizeof(str))];
     size_t lastNameLength = strlen(lastName);
 
     memcpy(student->name, firstName, firstNameLength * sizeof(char));
@@ -203,6 +231,7 @@ struct StudentListNode
 typedef struct StudentList
 {
     StudentListNode *head; // Points to first node or end (null ptr)
+    size_t size;           // List size (nodes count)
 } StudentList;
 
 // Initializes list
@@ -210,6 +239,7 @@ void initList(StudentList *students)
 {
     // Empty list
     students->head = NULL;
+    students->size = 0;
 }
 
 // Checks if list is empty
@@ -229,6 +259,7 @@ void insertList(StudentList *students, const StudentInfo *student)
 
     // Point list head to newly created head
     students->head = newHead;
+    students->size++;
 }
 
 // Searches by name (lowercase) for student info in list
@@ -264,6 +295,7 @@ int removeList(StudentList *students, const char *studentName)
     {
         StudentListNode *temp = students->head;
         students->head = students->head->next;
+        students->size--;
         free(temp);
         return 1;
     }
@@ -279,6 +311,7 @@ int removeList(StudentList *students, const char *studentName)
         if (compareStudentName(&current->student, studentName))
         {
             prev->next = current->next;
+            students->size--;
             free(current);
             return 1;
         }
@@ -639,10 +672,105 @@ void destroyClosedHash(ClosedHash *closedTable)
     free(temp);
 }
 
+// #################### Benchmark ###################
+
+// Runs different tests on an open hash table
+void benchmarkOpenHash(unsigned int N)
+{
+    StudentInfo openHashStudent;
+
+    // Create open hash
+    OpenHash openHash;
+    initOpenHash(&openHash, N);
+
+    // Speed benchmark
+    startTimer();
+    // Add random students to open hash
+    for (size_t i = 0; i < 100000; i++)
+    {
+        fillRandomStudent(&openHashStudent);
+        insertOpenHash(&openHash, &openHashStudent);
+    }
+    printf("Insert 100K students (avg): %f ms\n", endTimer() / 100000);
+
+    // Memory size benchmark
+    unsigned int structSize = sizeof(OpenHash) + openHash.size * sizeof(StudentList);
+    for (size_t i = 0; i < openHash.size; i++)
+        structSize += openHash.table[i].size * sizeof(StudentListNode);
+
+    printf("Size after 100K students: %u Bytes\n", structSize);
+
+    // Destroy open hash
+    destroyOpenHash(&openHash);
+}
+
+// Runs different tests on an closed hash table
+void benchmarkClosedHash(unsigned int N, PropingFunc proping)
+{
+    StudentInfo closedHashStudent;
+
+    // Create closed hash
+    ClosedHash closedHash;
+    initClosedHash(&closedHash, N);
+
+    // Speed benchmark
+    startTimer();
+    // Add random students to open hash
+    for (size_t i = 0; i < 100000; i++)
+    {
+        fillRandomStudent(&closedHashStudent);
+        insertClosedHash(&closedHash, &closedHashStudent, proping);
+    }
+    printf("Insert 100K students (avg): %f ms\n", endTimer() / 100000);
+
+    // Memory size benchmark
+    unsigned int structSize = sizeof(ClosedHash) + closedHash.size * sizeof(ClosedHashNode);
+    printf("Size after 100K students: %u Bytes\n", structSize);
+
+    // Destroy closed hash
+    destroyClosedHash(&closedHash);
+}
+
 int main()
 {
+    // Set random seed based on time
+    srand(time(NULL));
+
     // ############ Welcome Text ############
     printf("############### Welcome ###############\n\n");
+
+    // ############# Benchmark ##############
+
+#ifdef BENCHMARK
+    printf("######### Open Hash Benchmark #########\n\n");
+    printf("Small: [N = 100K]\n");
+    printf("-----------------\n");
+    benchmarkOpenHash(100000);
+    printf("\nMedium: [N = 1M]\n");
+    printf("----------------\n");
+    benchmarkOpenHash(1000000);
+    printf("\nLarge: [N = 10M]\n");
+    printf("----------------\n");
+    benchmarkOpenHash(10000000);
+
+    printf("\n####### Closed Hash Benchmark #######\n\n");
+    printf("Small: [N = 100K]\n");
+    printf("-----------------\n");
+    benchmarkClosedHash(100000, closedHashLinear);
+    printf("\nMedium: [N = 1M]\n");
+    printf("----------------\n");
+    benchmarkClosedHash(1000000, closedHashLinear);
+    printf("\nLarge: [N = 10M]\n");
+    printf("----------------\n");
+    benchmarkClosedHash(10000000, closedHashLinear);
+
+    printf("\n");
+#endif
+
+    // ########################################
+
+    printf("Press ENTER to start open hash demo...");
+    waitForEnter();
 
     // ########### Open Hash Demo ###########
     printf("########### Open Hash Demo ############\n\n");
@@ -707,13 +835,18 @@ int main()
     if (removeOpenHash(&openHash, openHashRemoveName))
         printf("Removed student.\n\n");
     else
-        printf("Couldn't find student with that name.\n\n");
+        printf("Couldn't remove student with that name.\n\n");
 
     // Print open hash
     printOpenHash(&openHash);
 
     // Destroy open hash
     destroyOpenHash(&openHash);
+
+    // ########################################
+
+    printf("Press ENTER to start closed hash demo...");
+    waitForEnter();
 
     // ########## Closed Hash Demo ##########
     printf("########## Closed Hash Demo ###########\n\n");
@@ -749,7 +882,8 @@ int main()
     printf("[Insert Demo]\n");
     StudentInfo closedHashStudentInsert;
     fillStudent(&closedHashStudentInsert);
-    insertClosedHash(&closedHash, &closedHashStudentInsert, closedHashLinear);
+    if (!insertClosedHash(&closedHash, &closedHashStudentInsert, closedHashLinear))
+        printf("Couldn't insert student.\n\n");
 
     // Print closed hash
     printClosedHash(&closedHash);
@@ -780,7 +914,7 @@ int main()
     if (removeClosedHash(&closedHash, &closedHashRemoveDate, closedHashLinear))
         printf("Removed student.\n\n");
     else
-        printf("Couldn't find student with that name.\n\n");
+        printf("Couldn't remove student with that name.\n\n");
 
     // Print closed hash
     printClosedHash(&closedHash);
