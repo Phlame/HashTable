@@ -350,26 +350,26 @@ void initOpenHash(OpenHash *openTable, unsigned int tableSize)
 }
 
 // Adds student info to open hash
-void insertOpenHash(OpenHash *openTables, const StudentInfo *student)
+void insertOpenHash(OpenHash *openTable, const StudentInfo *student)
 {
     // Get index using student name
-    size_t index = hashStudentName(student->name) % openTables->size;
+    size_t index = hashStudentName(student->name) % openTable->size;
 
     // Get students list
-    StudentList *students = &openTables->table[index];
+    StudentList *students = &openTable->table[index];
 
     // Add student to students list
     insertList(students, student);
 }
 
 // Searches by name for student info in open hash
-const StudentInfo *findOpenHash(OpenHash *openTables, const char *studentName)
+const StudentInfo *findOpenHash(OpenHash *openTable, const char *studentName)
 {
     // Get index using student name
-    size_t index = hashStudentName(studentName) % openTables->size;
+    size_t index = hashStudentName(studentName) % openTable->size;
 
     // Get students list
-    StudentList *students = &openTables->table[index];
+    StudentList *students = &openTable->table[index];
 
     // Search student in students list
     const StudentListNode *listNode = findList(students, studentName);
@@ -381,13 +381,13 @@ const StudentInfo *findOpenHash(OpenHash *openTables, const char *studentName)
 }
 
 // Removes student info with name from open hash
-int removeOpenHash(OpenHash *openTables, const char *studentName)
+int removeOpenHash(OpenHash *openTable, const char *studentName)
 {
     // Get index using student name
-    size_t index = hashStudentName(studentName) % openTables->size;
+    size_t index = hashStudentName(studentName) % openTable->size;
 
     // Get students list
-    StudentList *students = &openTables->table[index];
+    StudentList *students = &openTable->table[index];
 
     // Remove student from students list
     return removeList(students, studentName);
